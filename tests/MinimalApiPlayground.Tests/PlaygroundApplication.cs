@@ -2,10 +2,6 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Xunit;
-
-// HACK: Workardound for https://github.com/dotnet/aspnetcore/issues/35990
-[assembly: CollectionBehavior(CollectionBehavior.CollectionPerAssembly)]
 
 namespace MinimalApiPlayground.Tests
 {
