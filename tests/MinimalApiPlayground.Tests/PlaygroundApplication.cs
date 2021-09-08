@@ -7,7 +7,6 @@ namespace MinimalApiPlayground.Tests
 {
     internal class PlaygroundApplication : WebApplicationFactory<Program>
     {
-        private static readonly string _connectionString = "Data Source=testtodos.db";
         private readonly string _environment;
 
         public PlaygroundApplication(string environment = "Development")
@@ -17,8 +16,6 @@ namespace MinimalApiPlayground.Tests
 
         protected override IHost CreateHost(IHostBuilder builder)
         {
-            EnsureDb();
-
             builder.UseEnvironment(_environment);
 
             // Add mock/test services to the builder here
@@ -26,33 +23,15 @@ namespace MinimalApiPlayground.Tests
             {
                 services.AddScoped(sp =>
                 {
-                    // Replace SQLite connection string for tests
+                    // Replace SQLite with in-memory database for tests
                     return new DbContextOptionsBuilder<TodoDb>()
-                        .UseSqlite(_connectionString)
+                        .UseInMemoryDatabase("Tests")
                         .UseApplicationServiceProvider(sp)
                         .Options;
                 });
             });
 
             return base.CreateHost(builder);
-        }
-
-        private static readonly Lazy<bool> _dbInit = new(() =>
-        {
-            var dbContextOptions = new DbContextOptionsBuilder<TodoDb>()
-                            .UseSqlite(_connectionString)
-                            .Options;
-
-            using var db = new TodoDb(dbContextOptions);
-            db.Database.EnsureDeleted();
-            db.Database.Migrate();
-
-            return true;
-        });
-
-        private static void EnsureDb()
-        {
-            var _ = _dbInit.Value;
         }
     }
 }
