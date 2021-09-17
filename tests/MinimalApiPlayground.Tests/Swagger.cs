@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc.Testing;
 using System.Net;
 using Xunit;
 
@@ -8,7 +9,7 @@ public partial class Swagger
     [Fact]
     public async Task SwaggerUI_Responds_OK_In_Development()
     {
-        await using var application = new PlaygroundApplication();
+        await using var application = new PlaygroundApplication("Development");
 
         var client = application.CreateClient();
         var response = await client.GetAsync("/docs/");
@@ -19,10 +20,10 @@ public partial class Swagger
     [Fact]
     public async Task SwaggerUI_Redirects_To_Canonical_Path_In_Development()
     {
-        await using var application = new PlaygroundApplication();
+        await using var application = new PlaygroundApplication("Development");
 
 
-        var client = application.CreateClient();
+        var client = application.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
         var response = await client.GetAsync("/docs");
 
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
