@@ -2,6 +2,7 @@
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
@@ -59,7 +60,7 @@ public class OpenApiConfiguration : IHostingStartup, IStartupFilter
         public void Configure(SwaggerGenOptions options)
         {
             options.OperationFilter<ConsumesRequestTypeRequestFilter>();
-            //options.TagActionsBy(TagsSelector);
+            options.TagActionsBy(TagsSelector);
             options.CustomSchemaIds(SchemaIdSelector);
             options.CustomOperationIds(OperationIdSelector);
             options.SwaggerDoc(Version, new OpenApiInfo { Title = _hostingEnvironment.ApplicationName, Version = Version });
@@ -99,31 +100,31 @@ public class OpenApiConfiguration : IHostingStartup, IStartupFilter
         }
     }
 
-    // private static IList<string> TagsSelector(ApiDescription api)
-    // {
-    //     var tags = new List<string>();
+    private static IList<string> TagsSelector(ApiDescription api)
+    {
+        var tags = new List<string>();
 
-    //     foreach (var em in api.ActionDescriptor.EndpointMetadata)
-    //     {
-    //         if (em is ITagsMetadata itm)
-    //         {
-    //             tags.AddRange(itm.Tags);
-    //         }
-    //     }
+        foreach (var em in api.ActionDescriptor.EndpointMetadata)
+        {
+            if (em is ITagsMetadata itm)
+            {
+                tags.AddRange(itm.Tags);
+            }
+        }
 
-    //     if (tags.Count == 0)
-    //     {
-    //         // Swashbuckle defaults to using the controller route value as a tag so add it here
-    //         // if there wasn't more specific tag metadata present
-    //         var controller = api.ActionDescriptor.RouteValues["controller"];
-    //         if (controller is not null)
-    //         {
-    //             tags.Add(controller);
-    //         }
-    //     }
+        if (tags.Count == 0)
+        {
+            // Swashbuckle defaults to using the controller route value as a tag so add it here
+            // if there wasn't more specific tag metadata present
+            var controller = api.ActionDescriptor.RouteValues["controller"];
+            if (controller is not null)
+            {
+                tags.Add(controller);
+            }
+        }
 
-    //     return tags;
-    // }
+        return tags;
+    }
 
     private static string SchemaIdSelector(Type modelType)
     {

@@ -40,8 +40,8 @@ app.UseAntiforgery();
 app.MapGet("/error", (HttpContext context) =>
     context.Features.Get<IExceptionHandlerFeature>()?.Error switch
     {
-        BadHttpRequestException ex => Results.Problem(ex.Message, statusCode: ex.StatusCode),
-        _ => Results.Problem("Internal server error")
+        BadHttpRequestException ex => Results.Extensions.Problem(detail: ex.Message, statusCode: ex.StatusCode),
+        _ => Results.Extensions.Problem()
     })
    .ExcludeFromDescription();
 
@@ -59,7 +59,7 @@ app.MapGet("/throw/{statusCode?}", (int? statusCode) =>
 
 // Hello World
 app.MapGet("/", () => "Hello World!")
-   .WithName("HelloWorldApi")
+   .WithName("HelloWorld")
    .WithTags("Examples");
 
 app.MapGet("/hello", () => new { Hello = "World" })
@@ -131,10 +131,12 @@ app.MapGet("/paged", (PagingData paging) =>
     $"ToString: {paging}\r\nToQueryString: {paging.ToQueryString()}")
     .WithTags("Examples");
 
+// Example of a wrapper generic type the can bind its generic argument
 app.MapGet("/wrapped/{id}", (Wrapped<int> id) =>
     $"Successfully parsed {id.Value} as Wrapped<int>!")
     .WithTags("Examples");
 
+// An example extensible binder system that allows for parameter binders to be configured in DI
 app.MapPost("/model", (Model<Todo> model) =>
     {
         Todo? todo = model;
@@ -208,6 +210,23 @@ app.MapPost("/todos", async (Todo todo, TodoDb db) =>
     .ProducesValidationProblem()
     .Produces<Todo>(StatusCodes.Status201Created);
 
+// Example of a custom DTO base type that could use abstract 
+app.MapPost("/todos/dto", (CreateTodoInput input, TodoDb db) =>
+    {
+        if (!MiniValidation.TryValidate(input, out var errors))
+            return Results.ValidationProblem(errors);
+
+        // Process the DTO here
+        var newTodo = new Todo { Id = 1, Title = input.Title };
+
+        return Results.Created($"/todo/{newTodo.Id}", newTodo);
+    })
+    .Accepts<CreateTodoInput>("application/json")
+    .WithName("AddTodoViaDto")
+    .WithTags("TodoApi")
+    .ProducesValidationProblem()
+    .Produces<Todo>(StatusCodes.Status201Created);
+
 // Example of a custom wrapper type that performs validation
 app.MapPost("/todos/validated-wrapper", async (Validated<Todo> inputTodo, TodoDb db) =>
     {
@@ -252,8 +271,8 @@ app.MapPost("/todos/xmlorjson", async (HttpRequest request, TodoDb db) =>
 
         var todo = contentType switch
         {
-            "application/json" => await request.Body.ReadAsJsonAsync<Todo>(),
-            "application/xml" => await request.Body.ReadAsXmlAsync<Todo>(request.ContentLength),
+            "application/json" => await request.ReadFromJsonAsync<Todo>(),
+            "application/xml" => await request.ReadFromXmlAsync<Todo>(request.ContentLength),
             _ => null,
         };
 

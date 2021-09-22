@@ -56,6 +56,7 @@ public class ErrorHandling
         Assert.Null(problemDetails?.RouteValues);
         Assert.Null(problemDetails?.Query);
         Assert.Null(problemDetails?.Endpoint);
+        Assert.Null(problemDetails?.Detail);
     }
 
     [Fact]
@@ -72,6 +73,7 @@ public class ErrorHandling
         Assert.NotNull(problemDetails?.RouteValues);
         Assert.NotNull(problemDetails?.Query);
         Assert.NotNull(problemDetails?.Endpoint);
+        Assert.NotNull(problemDetails?.Detail);
     }
 
     private async Task<ProblemDetails?> GET_Throw_Responds_With_ProblemDetails(PlaygroundApplication application)
@@ -87,7 +89,6 @@ public class ErrorHandling
         Assert.Equal(MediaTypeHeaderValue.Parse("application/problem+json"), contentType);
         Assert.Equal((int)HttpStatusCode.InternalServerError, problemDetails?.Status);
         Assert.NotNull(problemDetails?.Title);
-        Assert.NotNull(problemDetails?.Detail);
 
         return problemDetails;
     }

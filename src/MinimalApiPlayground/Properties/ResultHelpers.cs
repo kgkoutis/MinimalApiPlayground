@@ -2,12 +2,39 @@
 using System.Net.Mime;
 using System.Text;
 using System.Xml.Serialization;
-using Microsoft.AspNetCore.Http.Result;
+using Microsoft.AspNetCore.Http.Extensions;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Microsoft.AspNetCore.Http;
 
 static class ResultsExtensions
 {
+    public static IResult Problem(this IResultExtensions resultExtensions, string? detail = null, string? instance = null, int? statusCode = null, string? title = null, string? type = null, Dictionary<string, string>? extensions = null)
+    {
+        var problemDetails = new ProblemDetails
+        {
+            Title = title,
+            Detail = detail,
+            Status = statusCode,
+            Instance = instance,
+            Type = type
+        };
+        if (extensions != null)
+        {
+            foreach (var extension in extensions)
+            {
+                problemDetails.Extensions.Add(extension.Key, extension.Value);
+            }
+        }
+
+        return new ProblemResult(problemDetails);
+    }
+
+    public static IResult Problem(this IResultExtensions resultExtensions, ProblemDetails problemDetails)
+    {
+        return new ProblemResult(problemDetails);
+    }
+
     public static IResult CreatedWithContentType<T>(this IResultExtensions resultExtensions, T responseBody, string contentType)
     {
         ArgumentNullException.ThrowIfNull(resultExtensions, nameof(resultExtensions));
@@ -20,6 +47,37 @@ static class ResultsExtensions
         ArgumentNullException.ThrowIfNull(resultExtensions, nameof(resultExtensions));
 
         return new HtmlResult(html);
+    }
+
+    class ProblemResult : IResult
+    {
+        private readonly ProblemDetails _problemDetails;
+
+        public ProblemResult(ProblemDetails problemDetails)
+        {
+            _problemDetails = problemDetails;
+        }
+
+        public async Task ExecuteAsync(HttpContext httpContext)
+        {
+            _problemDetails.Status ??= _problemDetails is HttpValidationProblemDetails ?
+                StatusCodes.Status400BadRequest :
+                StatusCodes.Status500InternalServerError;
+
+            if (ProblemDetailsDefaults.Defaults.TryGetValue(_problemDetails.Status.Value, out var defaults))
+            {
+                _problemDetails.Title ??= defaults.Title;
+                _problemDetails.Type ??= defaults.Type;
+            }
+
+            if (!_problemDetails.Extensions.ContainsKey("requestId"))
+            {
+                _problemDetails.Extensions.Add("requestId", Activity.Current?.Id ?? httpContext.TraceIdentifier);
+            }
+
+            httpContext.Response.StatusCode = _problemDetails.Status.Value;
+            await httpContext.Response.WriteAsJsonAsync(_problemDetails, _problemDetails.GetType(), options: null, contentType: "application/problem+json");
+        }
     }
 
     class CreatedWithContentTypeResult<T> : IResult

@@ -3,9 +3,9 @@ using Microsoft.AspNetCore.Mvc.ApiExplorer;
 
 namespace Microsoft.AspNetCore.Http;
 
-public static class EndpointConventionBuilderExtensions
+public static class RouteHandlerBuilderExtensions
 {
-    public static DelegateEndpointConventionBuilder AcceptsFormFile(this DelegateEndpointConventionBuilder builder, string fieldName)
+    public static RouteHandlerBuilder AcceptsFormFile(this RouteHandlerBuilder builder, string fieldName)
     {
         builder.WithMetadata(new ConsumesRequestTypeAttribute("multipart/form-data"));
         builder.WithMetadata(new ApiParameterDescription { Name = fieldName, Source = Mvc.ModelBinding.BindingSource.FormFile });
@@ -13,7 +13,7 @@ public static class EndpointConventionBuilderExtensions
         return builder;
     }
 
-    public static DelegateEndpointConventionBuilder RequiresAntiforgery(this DelegateEndpointConventionBuilder builder)
+    public static RouteHandlerBuilder RequiresAntiforgery(this RouteHandlerBuilder builder)
     {
         builder.WithMetadata(new AntiforgeryMetadata());
 
