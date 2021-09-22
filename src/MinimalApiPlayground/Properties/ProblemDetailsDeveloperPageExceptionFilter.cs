@@ -9,18 +9,7 @@ namespace Microsoft.AspNetCore.Diagnostics;
 /// </summary>
 public class ProblemDetailsDeveloperPageExceptionFilter : IDeveloperPageExceptionFilter
 {
-    private static readonly object ProblemDetailsItemsKey = new object();
     private static readonly MediaTypeHeaderValue _jsonMediaType = new MediaTypeHeaderValue("application/json");
-
-    private static readonly RequestDelegate _respondWithProblemDetails = RequestDelegateFactory.Create((HttpContext context) =>
-    {
-        if (context.Items.TryGetValue(ProblemDetailsItemsKey, out var problemDetailsItem) && problemDetailsItem is ProblemDetails problemDetails)
-        {
-            return Results.Extensions.Problem(problemDetails);
-        }
-
-        return null;
-    }).RequestDelegate;
 
     public async Task HandleExceptionAsync(ErrorContext errorContext, Func<ErrorContext, Task> next)
     {
@@ -62,8 +51,7 @@ public class ProblemDetailsDeveloperPageExceptionFilter : IDeveloperPageExceptio
             var requestId = Activity.Current?.Id ?? httpContext.TraceIdentifier;
             problemDetails.Extensions.Add("requestId", requestId);
 
-            errorContext.HttpContext.Items.Add(ProblemDetailsItemsKey, problemDetails);
-            await _respondWithProblemDetails(errorContext.HttpContext);
+            await Results.Extensions.Problem(problemDetails).ExecuteAsync(httpContext);
         }
         else
         {
