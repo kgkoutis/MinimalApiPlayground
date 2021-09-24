@@ -136,6 +136,12 @@ app.MapGet("/wrapped/{id}", (Wrapped<int> id) =>
     $"Successfully parsed {id.Value} as Wrapped<int>!")
     .WithTags("Examples");
 
+// Example of bind logic coming from static methods defined on inherited/implemented interface
+// TODO: Depends on https://github.com/dotnet/aspnetcore/issues/36935
+app.MapPost("/bind-via-interface", (ExampleInput input) =>
+    $"Successfully bound {input.StringProperty} as ExampleInput!")
+    .WithTags("Examples");
+
 // An example extensible binder system that allows for parameter binders to be configured in DI
 app.MapPost("/model", (Model<Todo> model) =>
     {
@@ -456,6 +462,11 @@ public class TodoBinder : IParameterBinder<Todo>
 
         return todo;
     }
+}
+
+public class ExampleInput : IInterfaceBinder<ExampleInput>
+{
+    public string? StringProperty { get; set; }
 }
 
 class TodoDb : DbContext

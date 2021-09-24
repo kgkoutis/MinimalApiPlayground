@@ -18,7 +18,7 @@ public class ProblemDetailsDeveloperPageExceptionFilter : IDeveloperPageExceptio
         var ex = errorContext.Exception;
         var httpContext = errorContext.HttpContext;
 
-        if (acceptHeader?.Any(h => h.IsSubsetOf(_jsonMediaType)) == true)
+        if (acceptHeader?.Any(h => _jsonMediaType.IsSubsetOf(h)) == true)
         {
             var problemDetails = new ProblemDetails
             {
@@ -50,6 +50,9 @@ public class ProblemDetailsDeveloperPageExceptionFilter : IDeveloperPageExceptio
             }
             var requestId = Activity.Current?.Id ?? httpContext.TraceIdentifier;
             problemDetails.Extensions.Add("requestId", requestId);
+
+            await Results.Json(problemDetails, null, "application/problem+json", problemDetails.Status)
+                .ExecuteAsync(httpContext);
 
             await Results.Extensions.Problem(problemDetails).ExecuteAsync(httpContext);
         }
