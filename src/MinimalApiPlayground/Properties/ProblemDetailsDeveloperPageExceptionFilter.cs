@@ -9,7 +9,7 @@ namespace Microsoft.AspNetCore.Diagnostics;
 /// </summary>
 public class ProblemDetailsDeveloperPageExceptionFilter : IDeveloperPageExceptionFilter
 {
-    private static readonly MediaTypeHeaderValue _jsonMediaType = new MediaTypeHeaderValue("application/json");
+    private static readonly MediaTypeHeaderValue _problemJsonMediaType = new MediaTypeHeaderValue("application/problem+json");
 
     public async Task HandleExceptionAsync(ErrorContext errorContext, Func<ErrorContext, Task> next)
     {
@@ -18,7 +18,7 @@ public class ProblemDetailsDeveloperPageExceptionFilter : IDeveloperPageExceptio
         var ex = errorContext.Exception;
         var httpContext = errorContext.HttpContext;
 
-        if (acceptHeader?.Any(h => _jsonMediaType.IsSubsetOf(h)) == true)
+        if (acceptHeader?.Any(h => _problemJsonMediaType.IsSubsetOf(h)) == true)
         {
             var problemDetails = new ProblemDetails
             {
@@ -48,11 +48,6 @@ public class ProblemDetailsDeveloperPageExceptionFilter : IDeveloperPageExceptio
                     httpMethods = httpMethods != null ? string.Join(", ", httpMethods) : ""
                 });
             }
-            var requestId = Activity.Current?.Id ?? httpContext.TraceIdentifier;
-            problemDetails.Extensions.Add("requestId", requestId);
-
-            await Results.Json(problemDetails, null, "application/problem+json", problemDetails.Status)
-                .ExecuteAsync(httpContext);
 
             await Results.Extensions.Problem(problemDetails).ExecuteAsync(httpContext);
         }

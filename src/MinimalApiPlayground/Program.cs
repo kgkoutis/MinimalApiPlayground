@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Net.Http.Headers;
 using MinimalApiPlayground.ModelBinding;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -37,11 +38,26 @@ if (!app.Environment.IsDevelopment())
 app.UseAntiforgery();
 
 // Error handling
+var problemJsonMediaType = new MediaTypeHeaderValue("application/problem+json");
 app.MapGet("/error", (HttpContext context) =>
-    context.Features.Get<IExceptionHandlerFeature>()?.Error switch
     {
-        BadHttpRequestException ex => Results.Extensions.Problem(detail: ex.Message, statusCode: ex.StatusCode),
-        _ => Results.Extensions.Problem()
+        var error = context.Features.Get<IExceptionHandlerFeature>()?.Error;
+        var badRequestEx = error as BadHttpRequestException;
+        var statusCode = badRequestEx?.StatusCode ?? StatusCodes.Status500InternalServerError;
+
+        if (context.Request.GetTypedHeaders().Accept?.Any(h => problemJsonMediaType.IsSubsetOf(h)) == true)
+        {
+            // JSON Problem Details
+            return error switch
+            {
+                BadHttpRequestException ex => Results.Extensions.Problem(detail: ex.Message, statusCode: ex.StatusCode),
+                _ => Results.Extensions.Problem()
+            };
+        }
+
+        // Plain text
+        context.Response.StatusCode = statusCode;
+        return Results.Text(badRequestEx?.Message ?? "An unhandled exception occurred while processing the request.");
     })
    .ExcludeFromDescription();
 
