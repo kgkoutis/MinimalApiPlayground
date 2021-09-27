@@ -237,7 +237,7 @@ app.MapPost("/todos", async (Todo todo, TodoDb db) =>
 // Example of a custom DTO base type that could use abstract 
 app.MapPost("/todos/dto", (CreateTodoInput input, TodoDb db) =>
     {
-        if (!MiniValidation.TryValidate(input, out var errors))
+        if (!MiniValidator.TryValidate(input, out var errors))
             return Results.ValidationProblem(errors);
 
         // Process the DTO here
