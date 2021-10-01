@@ -23,7 +23,7 @@ builder.Services.AddAntiforgery();
 builder.Services.AddSqlite<TodoDb>(connectionString);
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 builder.Services.AddProblemDetailsDeveloperPageExceptionFilter();
-builder.Services.AddParameterBinder<TodoBinder, Todo>();
+//builder.Services.AddParameterBinder<TodoBinder, Todo>();
 
 // This enables MVC's model binders
 builder.Services.AddMvcCore();
