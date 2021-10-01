@@ -23,7 +23,7 @@ builder.Services.AddAntiforgery();
 builder.Services.AddSqlite<TodoDb>(connectionString);
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 builder.Services.AddProblemDetailsDeveloperPageExceptionFilter();
-//builder.Services.AddParameterBinder<TodoBinder, Todo>();
+builder.Services.AddParameterBinder<TodoBinder, Todo>();
 
 // This enables MVC's model binders
 builder.Services.AddMvcCore();
@@ -168,6 +168,14 @@ app.MapPost("/model", (Model<Todo> model) =>
     })
     .WithTags("Examples")
     .Accepts<Todo>("application/json");
+
+app.MapPost("/model-nobinder", (Model<NoBinder> model) =>
+    {
+        NoBinder? value = model;
+        return Results.Ok(value);
+    })
+    .WithTags("Examples")
+    .Accepts<NoBinder>("application/json");
 
 // Using MVC's model binding logic via a generic wrapping shim
 app.MapGet("/paged2", (ModelBinder<PagedData> paging) =>
@@ -480,6 +488,11 @@ public class TodoBinder : IParameterBinder<Todo>
 
         return todo;
     }
+}
+
+public class NoBinder
+{
+    public string? Name { get; set; } = $"Default value set by {nameof(NoBinder)}";
 }
 
 public class ExampleInput : IInterfaceBinder<ExampleInput>
