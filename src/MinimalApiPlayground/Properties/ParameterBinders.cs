@@ -36,7 +36,7 @@
                 return Create(value);
             }
 
-            var (defaultBinderResult, statusCode) = await DefaultBinder<TModel>.GetValueAsync(context);
+            var (defaultBinderResult, statusCode) = await DefaultBinder<TModel>.GetValueAsync(context, parameter);
 
             if (statusCode != StatusCodes.Status200OK)
             {
