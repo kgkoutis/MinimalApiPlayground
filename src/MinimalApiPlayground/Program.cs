@@ -177,6 +177,54 @@ app.MapPost("/model-nobinder", (Model<NoBinder> model) =>
     .WithTags("Examples")
     .Accepts<NoBinder>("application/json");
 
+app.MapPost("/suppress-defaults", (SuppressDefaultResponse<Todo?> todo, HttpContext httpContext) =>
+    {
+        if (todo.Exception != null)
+        {
+            // There was an exception during binding, handle it however you like
+            throw todo.Exception;
+        }
+
+        if (todo.StatusCode != 200)
+        {
+            // The default logic would have auto-responded, do what you like instead
+            throw new BadHttpRequestException("Your request was bad and you should feel bad", todo.StatusCode);
+        }
+
+        return Results.Ok(todo.Value);
+    })
+    .WithTags("Examples")
+    .Accepts<Todo>("application/json"); ;
+
+app.MapPost("/suppress-binding", async (SuppressBinding<Todo?> todo, HttpContext httpContext) =>
+    {
+        try
+        {
+            // Manually invoke the default binding logic
+            var (boundValue, statusCode) = await DefaultBinder<Todo>.GetValueAsync(httpContext);
+
+            if (statusCode != 200)
+            {
+                // The default binding resulted in a default response, e.g. 400
+                // We can respond how we like instead
+                return Results.BadRequest($"Issue with default binding, status code returned was {statusCode}");
+            }
+
+            return boundValue switch
+            {
+                object => Results.Ok(boundValue),
+                _ => Results.Text("Bound value was null")
+            };
+        }
+        catch (Exception ex)
+        {
+            // Exception occurred during default binding!
+            return Results.UnprocessableEntity(ex.ToString());
+        }
+    })
+    .WithTags("Examples")
+    .Accepts<Todo>("application/json");
+
 // Using MVC's model binding logic via a generic wrapping shim
 app.MapGet("/paged2", (ModelBinder<PagedData> paging) =>
     $"model: {paging.Model}, valid: {paging.ModelState.IsValid}")

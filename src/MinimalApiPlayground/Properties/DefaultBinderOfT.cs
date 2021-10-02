@@ -5,20 +5,24 @@ using System.Reflection.Emit;
 internal static class DefaultBinder<TValue>
 {
     private static readonly string _itemsKeyS = "__DefaultBinder<TValue>_ValueResult_Key";
-    private static readonly ConcurrentDictionary<(Type, ParameterInfo), RequestDelegate> _delegateCache = new();
+    private static readonly ConcurrentDictionary<(Type, ParameterInfo?), RequestDelegate> _delegateCache = new();
 
-    public static async Task<(TValue?, int)> GetValueAsync(HttpContext httpContext, ParameterInfo parameter)
+    public static async Task<(TValue?, int)> GetValueAsync(HttpContext httpContext, ParameterInfo? parameter = null)
     {
+        ArgumentNullException.ThrowIfNull(httpContext, nameof(httpContext));
+
+        var cacheKey = (typeof(TValue), parameter);
+        var requestDelegate = _delegateCache.GetOrAdd(cacheKey, CreateRequestDelegateUsingRefEmit);
+
         var originalStatusCode = httpContext.Response.StatusCode;
-
-        var requestDelegate = _delegateCache.GetOrAdd((typeof(TValue), parameter), CreateRequestDelegateUsingRefEmit);
         await requestDelegate(httpContext);
+        var postBindingStatusCode = httpContext.Response.StatusCode;
 
-        if (originalStatusCode != httpContext.Response.StatusCode)
+        if (originalStatusCode != postBindingStatusCode)
         {
             // Default binder ran and detected an issue
             httpContext.Response.StatusCode = originalStatusCode;
-            return (default(TValue?), httpContext.Response.StatusCode);
+            return (default(TValue?), postBindingStatusCode);
         }
 
         return ((TValue?)httpContext.Items[_itemsKeyS], StatusCodes.Status200OK);
@@ -33,7 +37,7 @@ internal static class DefaultBinder<TValue>
     private static Type[] Execute_ParamTypes = new[] { typeof(TValue), typeof(HttpContext) };
     private static Type RouteHandler_DelegateType = typeof(Func<,,>).MakeGenericType(typeof(TValue), typeof(HttpContext), typeof(IResult));
 
-    private static RequestDelegate CreateRequestDelegateUsingRefEmit((Type TargetType, ParameterInfo Parameter) key)
+    private static RequestDelegate CreateRequestDelegateUsingRefEmit((Type TargetType, ParameterInfo? Parameter) key)
     {
         // Module to generate:
         // class FakeResult : IResult
@@ -55,8 +59,9 @@ internal static class DefaultBinder<TValue>
 
         var targetType = key.TargetType;
         var parameter = key.Parameter;
+        var parameterName = parameter?.Name ?? "value";
 
-        var assemblyName = $"{nameof(DefaultBinder<TValue>)}.Assembly.{parameter.ParameterType}.{parameter.Name}";
+        var assemblyName = $"{nameof(DefaultBinder<TValue>)}.Assembly.{targetType}.{parameterName}";
         var asm = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(assemblyName), AssemblyBuilderAccess.Run);
         var module = asm.DefineDynamicModule(assemblyName);
 
@@ -87,13 +92,9 @@ internal static class DefaultBinder<TValue>
         routeHandlerStaticCtorIl.Emit(OpCodes.Ret);
 
         // public static IResult Execute(MyType value, HttpContext httpContext) {
-        var routeHandlerExecute = routeHandlerBuilder.DefineMethod(
-            "Execute",
-            MethodAttributes.Public | MethodAttributes.Static,
-            typeof(IResult),
-            Execute_ParamTypes);
+        var routeHandlerExecute = routeHandlerBuilder.DefineMethod("Execute", MethodAttributes.Public | MethodAttributes.Static, typeof(IResult), Execute_ParamTypes);
         // Method parameters start at 1, 0 is the return value
-        var param1 = routeHandlerExecute.DefineParameter(1, ParameterAttributes.None, parameter.Name);
+        var param1 = routeHandlerExecute.DefineParameter(1, ParameterAttributes.None, parameterName);
         var param2 = routeHandlerExecute.DefineParameter(2, ParameterAttributes.None, "httpContext");
         
         // TODO: Clone attributes from original parameter on to generated parameter
