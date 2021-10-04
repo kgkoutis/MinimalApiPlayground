@@ -194,7 +194,7 @@ app.MapPost("/suppress-defaults", (SuppressDefaultResponse<Todo?> todo, HttpCont
         return Results.Ok(todo.Value);
     })
     .WithTags("Examples")
-    .Accepts<Todo>("application/json"); ;
+    .Accepts<Todo>("application/json");
 
 app.MapPost("/suppress-binding", async (SuppressBinding<Todo?> todo, HttpContext httpContext) =>
     {
