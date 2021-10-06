@@ -22,8 +22,4 @@
     <PackageReference Include="System.Runtime.Experimental" Version="6.0.0-rc.*" />
   </ItemGroup>
 
-  <ItemGroup>
-    <InternalsVisibleTo Include="MinimalApiPlayground.Tests" />
-  </ItemGroup>
-
 </Project>
